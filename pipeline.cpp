@@ -84,12 +84,11 @@ int main(){
 	}
 	for(int i=0;i<32;i++){
 		reg_file.push_back(a);
-		//a>>=1;
-		//cout << a << endl;
 	}
 	reg_file[29] = bitset<32>(4096);
 
-	ifstream infile("input.txt");
+	ifstream infile("show_branch.txt");
+	// ifstream infile("input_show_stalls.txt");
 	string line;
 	int pc=0;
 	while(getline(infile,line)){
@@ -100,25 +99,21 @@ int main(){
 			v.push_back(word);
 			//cout << word << " ";
 		}
-		inst_mem.push_back(v);
+		// inst_mem.push_back(v);
 		//cout << endl;
 		if(v.size()==1){
 			string s = v[0];
 			s.pop_back();
 			pair<string,int> p;
 			p.first = s;
-			p.second = pc+1;
+			p.second = pc;
 			lookup.insert(p);
+			// cout << pc+1 << endl;
+		}else{
+			inst_mem.push_back(v);
+			pc++;
 		}
-		pc++;
 	}
-	// cout << inst_mem[0][0] << endl;
-	
-	// pc = 0;
-	// int num_ins = 0;
-	// int clock_cycles = 0;
-	// vector<bitset<32>> ifid;
-	// bitset<32>
 	//-------------------------------------------------------
 	// lets create pipe line registers.
 	struct ifidPipe* ifid_reg = (struct ifidPipe*)malloc(sizeof(struct ifidPipe));
@@ -163,7 +158,7 @@ int main(){
 	memwb_reg -> reg_write = false;
 	//------------------------------------------------------------
 	
-	int stall_type = 0;  // no stall, 1 cylcle, 2 cycles  
+	int stall_type = 0;  // no stall, 1 cycle, 2 cycles  
 	int stall_no;		 // at which stall are we
 
 	int s = inst_mem.size();
@@ -178,12 +173,13 @@ int main(){
 			half_cycle = false;
 			// IF
 			cout << "-----------------by the end of 2nd HALF CYCLE----------------" << endl;
-			cout << "pc : "  << ifid_reg->pc << endl;
+			cout << "pc : "  << ifid_reg->pc + 1 << endl;
 			struct ifidPipe* temp_ifid_reg = (struct ifidPipe*)malloc(sizeof(struct ifidPipe));
 			temp_ifid_reg->pc = (ifid_reg -> pc) +1;
 			temp_ifid_reg->nop = false;
 			cout << "Inst Fetch" << endl;
 			cout << "---------------" << endl;
+
 			// ID
 			struct idexPipe* temp_idex_reg = (struct idexPipe*)malloc(sizeof(struct idexPipe));
 			temp_idex_reg->wb = idex_reg->wb;
@@ -211,34 +207,33 @@ int main(){
 					cout << "stall" << endl;
 					temp_idex_reg -> nop = true;
 				}
-				else if(inst_mem[ifid_reg->pc][0] == "add" || inst_mem[ifid_reg->pc][0] == "sub"){
-					temp_idex_reg->wb = 1;
-					temp_idex_reg->m1 = 0;
-					temp_idex_reg->m2 = 0;
-					temp_idex_reg->ex1 = 0;
-					// temp_idex_reg->ex2 = 0; //ex2 is for alu control 0 means add
-					temp_idex_reg->pc = ifid_reg->pc;
-					temp_idex_reg -> nop = false;
+				else if(inst_mem[ifid_reg->pc][0] == "beq"){
+					cout << "branch : ";
+					temp_idex_reg->wb = 0;  // for chosing read data from memory or alu result. 
+					temp_idex_reg->m1 = 0;  // mem read
+					temp_idex_reg->m2 = 0;  // mem write
+					temp_idex_reg->ex1 = 0; //ex1 is for operating with offset
+					temp_idex_reg->ex2 = 0; //ex2 is for alu control 0 means add
+					temp_idex_reg->pc = 0;
+					temp_idex_reg-> rd1 = 0;	// read data 1
+					temp_idex_reg-> rd2 = 0; // read data 2 
+					temp_idex_reg -> wb_reg = 0;			// write back register number
+					temp_idex_reg -> nop = true;			// initially all stages have to non operational
+					temp_idex_reg -> reg_write = false;	// would we be writing to reg_file?
 
 					string rds = inst_mem[ifid_reg->pc][1];
 					rds.pop_back();
 					string rss = inst_mem[ifid_reg->pc][2];
 					rss.pop_back();
-					string rts = inst_mem[ifid_reg->pc][3];
-
+					string offset = inst_mem[ifid_reg->pc][3];
 					map<string,int>::iterator p = reg_map.find(rds);
 					int rd = p->second;
 					p = reg_map.find(rss);
 					int rs = p->second;
-					p = reg_map.find(rts);
-					int rt = p->second;
+					p = lookup.find(offset);
+					int off = p->second;
 
-					temp_idex_reg-> rd1 = (int)reg_file[rs].to_ulong();
-					temp_idex_reg-> rd2 = (int)reg_file[rt].to_ulong();
-					temp_idex_reg -> wb_reg = rd;
-					temp_idex_reg -> reg_write = true;
-					temp_idex_reg->nop = ifid_reg->nop;
-					if(idex_reg->wb_reg == rs || idex_reg->wb_reg == rt){
+					if((idex_reg->wb_reg == rs || idex_reg->wb_reg == rd) && idex_reg->reg_write){
 						cout << "exe stall generated" << endl;
 						temp_idex_reg->nop = true; 
 						temp_ifid_reg->pc = (temp_ifid_reg -> pc) -1;
@@ -275,63 +270,117 @@ int main(){
 						another_ex_stall = false;
 						exe_stall = false;
 					}
-					// else if((exmem_reg->wb_reg == rs || exmem_reg->wb_reg == rt) && !exe_stall){
-					// 	cout << "mem stall generated" << endl;
-					// 	temp_idex_reg->nop = true; 
-					// 	temp_ifid_reg->pc = (temp_ifid_reg -> pc) -1;
+					else if((exmem_reg->wb_reg == rs || exmem_reg->wb_reg == rd )&& exmem_reg->reg_write && !exe_stall){
+						cout << "mem stall generated" << endl;
+						temp_idex_reg->nop = true; 
+						temp_ifid_reg->pc = (temp_ifid_reg -> pc) -1;
 
-					// 	temp_idex_reg->wb = 0;  // for chosing read data from memory or alu result. 
-					// 	temp_idex_reg->m1 = 0;  // mem read
-					// 	temp_idex_reg->m2 = 0;  // mem write
-					// 	temp_idex_reg->ex1 = 0; //ex1 is for operating with offset
-					// 	temp_idex_reg->ex2 = 0; //ex2 is for alu control 0 means add
-					// 	temp_idex_reg->pc = 0;
-					// 	temp_idex_reg-> rd1 = 0;	// read data 1
-					// 	temp_idex_reg-> rd2 = 0; // read data 2 
-					// 	temp_idex_reg -> wb_reg = 0;			// write back register number
-					// 	// temp_idex_reg -> nop = true;			// initially all stages have to non operational
-					// 	temp_idex_reg -> reg_write = false;	// would we be writing to reg_file?
-					// 	another_mem_stall = true;
-					// 	// stall_no++;
-					// }else if(another_mem_stall && !exe_stall){
-					// 	cout << "another mem stall generated" << endl;
-					// 	temp_idex_reg->nop = true; 
-					// 	temp_ifid_reg->pc = (temp_ifid_reg -> pc) -1;
+						temp_idex_reg->wb = 0;  // for chosing read data from memory or alu result. 
+						temp_idex_reg->m1 = 0;  // mem read
+						temp_idex_reg->m2 = 0;  // mem write
+						temp_idex_reg->ex1 = 0; //ex1 is for operating with offset
+						temp_idex_reg->ex2 = 0; //ex2 is for alu control 0 means add
+						temp_idex_reg->pc = 0;
+						temp_idex_reg-> rd1 = 0;	// read data 1
+						temp_idex_reg-> rd2 = 0; // read data 2 
+						temp_idex_reg -> wb_reg = 0;			// write back register number
+						// temp_idex_reg -> nop = true;			// initially all stages have to non operational
+						temp_idex_reg -> reg_write = false;	// would we be writing to reg_file?
+						another_ex_stall = false;
+						exe_stall = false;
+					}
+					else{
+						if(reg_file[rd]==reg_file[rs]){
+							temp_ifid_reg->pc=off; 
+							cout << "taken" << endl;
+						}else{
+							cout << "not taken" << endl;
+						}
+					}
+				}
+				else if(inst_mem[ifid_reg->pc][0] == "add" || inst_mem[ifid_reg->pc][0] == "sub"){
+					temp_idex_reg->wb = 1;
+					temp_idex_reg->m1 = 0;
+					temp_idex_reg->m2 = 0;
+					temp_idex_reg->ex1 = 0;
+					// temp_idex_reg->ex2 = 0; //ex2 is for alu control 0 means add
+					temp_idex_reg->pc = ifid_reg->pc;
+					temp_idex_reg -> nop = false;
 
-					// 	temp_idex_reg->wb = 0;  // for chosing read data from memory or alu result. 
-					// 	temp_idex_reg->m1 = 0;  // mem read
-					// 	temp_idex_reg->m2 = 0;  // mem write
-					// 	temp_idex_reg->ex1 = 0; //ex1 is for operating with offset
-					// 	temp_idex_reg->ex2 = 0; //ex2 is for alu control 0 means add
-					// 	temp_idex_reg->pc = 0;
-					// 	temp_idex_reg-> rd1 = 0;	// read data 1
-					// 	temp_idex_reg-> rd2 = 0; // read data 2 
-					// 	temp_idex_reg -> wb_reg = 0;			// write back register number
-					// 	// temp_idex_reg -> nop = true;			// initially all stages have to non operational
-					// 	temp_idex_reg -> reg_write = false;	// would we be writing to reg_file?
-					// 	another_mem_stall = true;
-					// 	another_mem_stall = false;
-					// 	next_mem_stall = true;
-					// }else if(next_mem_stall && !exe_stall){
-					// 	cout << "last mem stall generated" << endl;
-					// 	temp_idex_reg->nop = true; 
-					// 	temp_ifid_reg->pc = (temp_ifid_reg -> pc) -1;
+					string rds = inst_mem[ifid_reg->pc][1];
+					rds.pop_back();
+					string rss = inst_mem[ifid_reg->pc][2];
+					rss.pop_back();
+					string rts = inst_mem[ifid_reg->pc][3];
 
-					// 	temp_idex_reg->wb = 0;  // for chosing read data from memory or alu result. 
-					// 	temp_idex_reg->m1 = 0;  // mem read
-					// 	temp_idex_reg->m2 = 0;  // mem write
-					// 	temp_idex_reg->ex1 = 0; //ex1 is for operating with offset
-					// 	temp_idex_reg->ex2 = 0; //ex2 is for alu control 0 means add
-					// 	temp_idex_reg->pc = 0;
-					// 	temp_idex_reg-> rd1 = 0;	// read data 1
-					// 	temp_idex_reg-> rd2 = 0; // read data 2 
-					// 	temp_idex_reg -> wb_reg = 0;			// write back register number
-					// 	// temp_idex_reg -> nop = true;			// initially all stages have to non operational
-					// 	temp_idex_reg -> reg_write = false;	// would we be writing to reg_file?
-					// 	another_mem_stall = true;
-					// 	another_mem_stall = false;
-					// 	next_mem_stall = false;
-					// }
+					map<string,int>::iterator p = reg_map.find(rds);
+					int rd = p->second;
+					p = reg_map.find(rss);
+					int rs = p->second;
+					p = reg_map.find(rts);
+					int rt = p->second;
+
+					temp_idex_reg-> rd1 = (int)reg_file[rs].to_ulong();
+					temp_idex_reg-> rd2 = (int)reg_file[rt].to_ulong();
+					temp_idex_reg -> wb_reg = rd;
+					temp_idex_reg -> reg_write = true;
+					temp_idex_reg->nop = ifid_reg->nop;
+					if((idex_reg->wb_reg == rs || idex_reg->wb_reg == rt) && idex_reg->reg_write){
+						cout << "exe stall generated" << endl;
+						temp_idex_reg->nop = true; 
+						temp_ifid_reg->pc = (temp_ifid_reg -> pc) -1;
+
+						temp_idex_reg->wb = 0;  // for chosing read data from memory or alu result. 
+						temp_idex_reg->m1 = 0;  // mem read
+						temp_idex_reg->m2 = 0;  // mem write
+						temp_idex_reg->ex1 = 0; //ex1 is for operating with offset
+						temp_idex_reg->ex2 = 0; //ex2 is for alu control 0 means add
+						temp_idex_reg->pc = 0;
+						temp_idex_reg-> rd1 = 0;	// read data 1
+						temp_idex_reg-> rd2 = 0; // read data 2 
+						temp_idex_reg -> wb_reg = 0;			// write back register number
+						// temp_idex_reg -> nop = true;			// initially all stages have to non operational
+						temp_idex_reg -> reg_write = false;	// would we be writing to reg_file?
+						another_ex_stall = true;
+						exe_stall = true;
+					}else if(another_ex_stall){
+						cout << "exe stall generated" << endl;
+						temp_idex_reg->nop = true; 
+						temp_ifid_reg->pc = (temp_ifid_reg -> pc) -1;
+
+						temp_idex_reg->wb = 0;  // for chosing read data from memory or alu result. 
+						temp_idex_reg->m1 = 0;  // mem read
+						temp_idex_reg->m2 = 0;  // mem write
+						temp_idex_reg->ex1 = 0; //ex1 is for operating with offset
+						temp_idex_reg->ex2 = 0; //ex2 is for alu control 0 means add
+						temp_idex_reg->pc = 0;
+						temp_idex_reg-> rd1 = 0;	// read data 1
+						temp_idex_reg-> rd2 = 0; // read data 2 
+						temp_idex_reg -> wb_reg = 0;			// write back register number
+						// temp_idex_reg -> nop = true;			// initially all stages have to non operational
+						temp_idex_reg -> reg_write = false;	// would we be writing to reg_file?
+						another_ex_stall = false;
+						exe_stall = false;
+					}
+					else if((exmem_reg->wb_reg == rs || exmem_reg->wb_reg == rt )&& exmem_reg->reg_write && !exe_stall){
+						cout << "mem stall generated" << endl;
+						temp_idex_reg->nop = true; 
+						temp_ifid_reg->pc = (temp_ifid_reg -> pc) -1;
+
+						temp_idex_reg->wb = 0;  // for chosing read data from memory or alu result. 
+						temp_idex_reg->m1 = 0;  // mem read
+						temp_idex_reg->m2 = 0;  // mem write
+						temp_idex_reg->ex1 = 0; //ex1 is for operating with offset
+						temp_idex_reg->ex2 = 0; //ex2 is for alu control 0 means add
+						temp_idex_reg->pc = 0;
+						temp_idex_reg-> rd1 = 0;	// read data 1
+						temp_idex_reg-> rd2 = 0; // read data 2 
+						temp_idex_reg -> wb_reg = 0;			// write back register number
+						// temp_idex_reg -> nop = true;			// initially all stages have to non operational
+						temp_idex_reg -> reg_write = false;	// would we be writing to reg_file?
+						another_ex_stall = false;
+						exe_stall = false;
+					}
 					else{
 						if (inst_mem[ifid_reg->pc][0] == "add"){
 							cout << "add" << endl;
@@ -368,7 +417,7 @@ int main(){
 					temp_idex_reg -> nop = ifid_reg->nop;
 					temp_idex_reg -> reg_write = true;
 
-					if(idex_reg->wb_reg == rs){
+					if((idex_reg->wb_reg == rs)&& idex_reg->reg_write){
 						cout << "exe stall generated" << endl;
 						temp_idex_reg->nop = true;
 						int a1 = temp_ifid_reg->pc;
@@ -386,6 +435,7 @@ int main(){
 						// temp_idex_reg -> nop = true;			// initially all stages have to non operational
 						temp_idex_reg -> reg_write = false;	// would we be writing to reg_file?
 						another_ex_stall = true;
+						exe_stall=true;
 					}else if(another_ex_stall){
 						cout << "exe stall generated" << endl;
 						temp_idex_reg->nop = true; 
@@ -403,32 +453,28 @@ int main(){
 						// temp_idex_reg -> nop = true;			// initially all stages have to non operational
 						temp_idex_reg -> reg_write = false;	// would we be writing to reg_file?
 						another_ex_stall = false;
+						exe_stall=false;
 					}
-					// else if(exmem_reg->wb_reg == rs || mem_stall){
-					// 	if(stall_no<2){
-					// 		temp_idex_reg->nop = true; stall_no++;
-					// 		int a1 = temp_ifid_reg->pc;
-					// 		temp_ifid_reg->pc = a1 -1;
+					else if((exmem_reg->wb_reg == rs && exmem_reg->reg_write)&& exmem_reg->reg_write && !exe_stall){
+						cout << "mem stall generated" << endl;
+						temp_idex_reg->nop = true;
+						int a1 = temp_ifid_reg->pc;
+						temp_ifid_reg->pc = a1 -1;
 
-					// 		temp_idex_reg->wb = 0;  // for chosing read data from memory or alu result. 
-					// 		temp_idex_reg->m1 = 0;  // mem read
-					// 		temp_idex_reg->m2 = 0;  // mem write
-					// 		temp_idex_reg->ex1 = 0; //ex1 is for operating with offset
-					// 		temp_idex_reg->ex2 = 0; //ex2 is for alu control 0 means add
-					// 		temp_idex_reg->pc = 0;
-					// 		temp_idex_reg-> rd1 = 0;	// read data 1
-					// 		temp_idex_reg-> rd2 = 0; // read data 2 
-					// 		temp_idex_reg -> wb_reg = 0;			// write back register number
-					// 		// temp_idex_reg -> nop = true;			// initially all stages have to non operational
-					// 		temp_idex_reg -> reg_write = false;	// would we be writing to reg_file?
-					// 		mem_stall = true;
-					// 		// stall_no++;
-					// 		if(stall_no==2){
-					// 			stall_no = 0;
-					// 			mem_stall = false;
-					// 		}
-					// 	}
-					// }
+						temp_idex_reg->wb = 0;  // for chosing read data from memory or alu result. 
+						temp_idex_reg->m1 = 0;  // mem read
+						temp_idex_reg->m2 = 0;  // mem write
+						temp_idex_reg->ex1 = 0; //ex1 is for operating with offset
+						temp_idex_reg->ex2 = 0; //ex2 is for alu control 0 means add
+						temp_idex_reg->pc = 0;
+						temp_idex_reg-> rd1 = 0;	// read data 1
+						temp_idex_reg-> rd2 = 0; // read data 2 
+						temp_idex_reg -> wb_reg = 0;			// write back register number
+						// temp_idex_reg -> nop = true;			// initially all stages have to non operational
+						temp_idex_reg -> reg_write = false;	// would we be writing to reg_file?
+						another_ex_stall = false;
+						exe_stall=false;
+					}
 					else{
 						if(inst_mem[ifid_reg->pc][0] == "addi"){
 							temp_idex_reg->ex2 = 2;
@@ -509,6 +555,7 @@ int main(){
 							// temp_idex_reg -> nop = true;			// initially all stages have to non operational
 							temp_idex_reg -> reg_write = false;	// would we be writing to reg_file?
 							another_ex_stall = true;
+							exe_stall=true;
 								
 						}else if(another_ex_stall){
 							cout << "exe stall generated" << endl;
@@ -527,31 +574,28 @@ int main(){
 							// temp_idex_reg -> nop = true;			// initially all stages have to non operational
 							temp_idex_reg -> reg_write = false;	// would we be writing to reg_file?
 							another_ex_stall = false;
+							exe_stall=false;
 						}
-						// else if(exmem_reg->wb_reg == b || mem_stall){
-						// 	if(stall_no<2){
-						// 		temp_idex_reg->nop = true; stall_no++;
-						// 		temp_ifid_reg->pc = (temp_ifid_reg -> pc) -1;
+						else if(exmem_reg->wb_reg == b && exmem_reg->reg_write && !exe_stall){
+							cout << "mem stall generated" << endl;
+							temp_idex_reg->nop = true;
+							temp_ifid_reg->pc = (temp_ifid_reg -> pc) -1;
 
-						// 		temp_idex_reg->wb = 0;  // for chosing read data from memory or alu result. 
-						// 		temp_idex_reg->m1 = 0;  // mem read
-						// 		temp_idex_reg->m2 = 0;  // mem write
-						// 		temp_idex_reg->ex1 = 0; //ex1 is for operating with offset
-						// 		temp_idex_reg->ex2 = 0; //ex2 is for alu control 0 means add
-						// 		temp_idex_reg->pc = 0;
-						// 		temp_idex_reg-> rd1 = 0;	// read data 1
-						// 		temp_idex_reg-> rd2 = 0; // read data 2 
-						// 		temp_idex_reg -> wb_reg = 0;			// write back register number
-						// 		// temp_idex_reg -> nop = true;			// initially all stages have to non operational
-						// 		temp_idex_reg -> reg_write = false;	// would we be writing to reg_file?
-						// 		mem_stall = true;
-						// 		// stall_no++;
-						// 		if(stall_no==2){
-						// 			stall_no = 0;
-						// 			mem_stall = false;
-						// 		}
-						// 	}
-						// }
+							temp_idex_reg->wb = 0;  // for chosing read data from memory or alu result. 
+							temp_idex_reg->m1 = 0;  // mem read
+							temp_idex_reg->m2 = 0;  // mem write
+							temp_idex_reg->ex1 = 0; //ex1 is for operating with offset
+							temp_idex_reg->ex2 = 0; //ex2 is for alu control 0 means add
+							temp_idex_reg->pc = 0;
+							temp_idex_reg-> rd1 = 0;	// read data 1
+							temp_idex_reg-> rd2 = 0; // read data 2 
+							temp_idex_reg -> wb_reg = 0;			// write back register number
+							// temp_idex_reg -> nop = true;			// initially all stages have to non operational
+							temp_idex_reg -> reg_write = false;	// would we be writing to reg_file?
+							another_ex_stall = false;
+								
+						}
+						
 					}
 				}
 				ifid_reg->nop = true;
@@ -633,11 +677,6 @@ int main(){
 			struct memwbPipe* temp_memwb_reg = (struct memwbPipe*)malloc(sizeof(struct memwbPipe));
 			temp_memwb_reg -> wb = memwb_reg -> wb;
 			temp_memwb_reg -> read_data = memwb_reg -> read_data;
-			// temp_memwb_reg -> alu_result = memwb_reg -> alu_result;
-			// temp_memwb_reg -> wb_reg = memwb_reg -> wb_reg;
-			// temp_memwb_reg -> reg_write= memwb_reg -> reg_write;
-			// temp_memwb_reg -> nop = memwb_reg->nop;
-			// temp_memwb_reg -> reg_write = memwb_reg->reg_write;
 
 			temp_memwb_reg -> alu_result = exmem_reg->alu_result;
 			temp_memwb_reg -> wb_reg = exmem_reg->wb_reg;
