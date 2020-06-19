@@ -1,0 +1,180 @@
+addi $a3, $a3, 10
+addi $a0, $a0, 20
+addi $a1, $a1, 30
+add $a2, $t1, $a3
+beq $t4, $a2, end
+sll $t0, $a2, 2
+lw $a1, 8($a2)
+end:
+addi $a0, $a1, 40
+addi $a3, $a3, 10
+addi $a0, $a0, 20
+addi $a1, $a1, 30
+add $a2, $t1, $a3
+beq $t4, $a2, end
+sll $t0, $a2, 2
+lw $a1, 8($a2)
+end:
+addi $a0, $a1, 40
+addi $a3, $a3, 10
+addi $a0, $a0, 20
+addi $a1, $a1, 30
+add $a2, $t1, $a3
+beq $t4, $a2, end
+sll $t0, $a2, 2
+lw $a1, 8($a2)
+end:
+addi $a0, $a1, 40
+addi $a3, $a3, 10
+addi $a0, $a0, 20
+addi $a1, $a1, 30
+add $a2, $t1, $a3
+beq $t4, $a2, end
+sll $t0, $a2, 2
+lw $a1, 8($a2)
+end:
+addi $a0, $a1, 40
+addi $a3, $a3, 10
+addi $a0, $a0, 20
+addi $a1, $a1, 30
+add $a2, $t1, $a3
+beq $t4, $a2, end
+sll $t0, $a2, 2
+lw $a1, 8($a2)
+end:
+addi $a0, $a1, 40
+addi $a3, $a3, 10
+addi $a0, $a0, 20
+addi $a1, $a1, 30
+add $a2, $t1, $a3
+beq $t4, $a2, end
+sll $t0, $a2, 2
+lw $a1, 8($a2)
+end:
+addi $a0, $a1, 40
+addi $a3, $a3, 10
+addi $a0, $a0, 20
+addi $a1, $a1, 30
+add $a2, $t1, $a3
+beq $t4, $a2, end
+sll $t0, $a2, 2
+lw $a1, 8($a2)
+end:
+addi $a0, $a1, 40
+addi $a3, $a3, 10
+addi $a0, $a0, 20
+addi $a1, $a1, 30
+add $a2, $t1, $a3
+beq $t4, $a2, end
+sll $t0, $a2, 2
+lw $a1, 8($a2)
+end:
+addi $a0, $a1, 40
+addi $a3, $a3, 10
+addi $a0, $a0, 20
+lw $a1, 8($a2)
+add $a2, $t1, $a3
+beq $t4, $a2, end
+sll $t0, $a2, 2
+lw $a1, 8($a2)
+end:
+addi $a0, $a1, 40
+addi $a3, $a3, 10
+addi $a0, $a0, 20
+lw $a1, 8($a2)
+add $a2, $t1, $a3
+beq $t4, $a2, end
+sll $t0, $a2, 2
+lw $a1, 8($a2)
+end:
+addi $a0, $a1, 40
+addi $a3, $a3, 10
+addi $a0, $a0, 20
+addi $a1, $a1, 30
+add $a2, $t1, $a3
+beq $t4, $a2, end
+sll $t0, $a2, 2
+lw $a1, 8($a2)
+end:
+addi $a0, $a1, 40
+addi $a3, $a3, 10
+addi $a0, $a0, 20
+addi $a1, $a1, 30
+add $a2, $t1, $a3
+beq $t4, $a2, end
+sll $t0, $a2, 2
+lw $a1, 8($a2)
+end:
+addi $a0, $a1, 40
+addi $a3, $a3, 10
+addi $a0, $a0, 20
+addi $a1, $a1, 30
+add $a2, $t1, $a3
+beq $t4, $a2, end
+sll $t0, $a2, 2
+lw $a1, 8($a2)
+end:
+addi $a0, $a1, 40
+addi $a3, $a3, 10
+addi $a0, $a0, 20
+addi $a1, $a1, 30
+add $a2, $t1, $a3
+beq $t4, $a2, end
+sll $t0, $a2, 2
+lw $a1, 8($a2)
+end:
+addi $a0, $a1, 40
+addi $a3, $a3, 10
+addi $a0, $a0, 20
+addi $a1, $a1, 30
+add $a2, $t1, $a3
+beq $t4, $a2, end
+sll $t0, $a2, 2
+lw $a1, 8($a2)
+end:
+addi $a0, $a1, 40
+addi $a3, $a3, 10
+addi $a0, $a0, 20
+addi $a1, $a1, 30
+add $a2, $t1, $a3
+beq $t4, $a2, end
+sll $t0, $a2, 2
+lw $a1, 8($a2)
+end:
+addi $a0, $a1, 40
+addi $a3, $a3, 10
+addi $a0, $a0, 20
+addi $a1, $a1, 30
+add $a2, $t1, $a3
+beq $t4, $a2, end
+sll $t0, $a2, 2
+lw $a1, 8($a2)
+end:
+addi $a0, $a1, 40
+addi $a3, $a3, 10
+addi $a0, $a0, 20
+addi $a1, $a1, 30
+add $a2, $t1, $a3
+beq $t4, $a2, end
+sll $t0, $a2, 2
+lw $a1, 8($a2)
+end:
+addi $a0, $a1, 40
+addi $a3, $a3, 10
+addi $a0, $a0, 20
+lw $a1, 8($a2)
+add $a2, $t1, $a3
+beq $t4, $a2, end
+sll $t0, $a2, 2
+lw $a1, 8($a2)
+end:
+addi $a0, $a1, 40
+addi $a3, $a3, 10
+addi $a0, $a0, 20
+lw $a1, 8($a2)
+add $a2, $t1, $a3
+beq $t4, $a2, end
+sll $t0, $a2, 2
+lw $a1, 8($a2)
+end:
+addi $a0, $a1, 40
