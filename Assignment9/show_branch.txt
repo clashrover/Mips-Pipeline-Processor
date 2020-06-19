@@ -1,0 +1,9 @@
+addi $a0, $a0, 10
+beq $a0, $a2, end
+addi $a0, $a0, 10
+end:
+addi $a1, $a2, 20
+add $a2, $a3, $a0
+addi $a0, $a0, 10
+addi $a1, $a2, 20
+add $a2, $a3, $a0
