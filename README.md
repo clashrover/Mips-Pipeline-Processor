@@ -1,4 +1,4 @@
-# Mips_Processor_Simulator-Pipelined-
+# Mips_Processor_Simulator-Pipelined
 Mips simulator in c++ (Pipeline)
 
 ## Dealing with dependencies
